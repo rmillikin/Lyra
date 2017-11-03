@@ -1,0 +1,13 @@
+﻿<Window x:Class="Lyra.MainPage"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:Lyra="clr-namespace:Lyra"
+  Title="Lyra"
+  Height="500" Width="700" Loaded="Window_Loaded">
+    <StackPanel Orientation="Horizontal">
+        <ListView Name="listView" SelectionChanged ="listNode_Selected" Width="200"/>
+        <Viewbox>
+            <Canvas x:Name="canGraph" Background="White" Height="500" Width="500" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Viewbox>
+    </StackPanel>
+</Window>
