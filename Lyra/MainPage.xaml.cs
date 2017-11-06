@@ -7,6 +7,12 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using IO.Thermo;
+using IO.MzML;
+using UsefulProteomicsDatabases;
+using Microsoft.Win32;
+using System.Windows.Data;
+using System.ComponentModel;
 using System.Windows.Shapes;
 
 namespace Lyra
@@ -16,7 +22,7 @@ namespace Lyra
     public partial class MainPage
     {
         private Matrix WtoDMatrix, DtoWMatrix;
-        private List<ChromatographicPeak> DeconvolutedFeatures;
+        private ObservableCollection<ChromatographicPeak> DeconvolutedFeatures = new ObservableCollection<ChromatographicPeak>();
         Dictionary<int, SolidColorBrush> chargeToColor;
         IMsDataFile<IMsDataScan<IMzSpectrum<IMzPeak>>> rawFile;
 
@@ -27,15 +33,10 @@ namespace Lyra
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            string deconvolutionResults = @"C:\Users\rmillikin\Desktop\MS1Decon\DeconvolutionOutput-2017-11-02-16-36-05.tsv";
-            string ms2Results = @"C:\Users\rmillikin\Desktop\MS1Decon\output.tsv";
-            string rawFilePath = @"C:\Data\ionstarSample\B02_06_161103_A1_HCD_OT_4ul.raw";
-            
-            LoadData(deconvolutionResults, FileType.DeconvolutionTSV);
-            LoadData(ms2Results, FileType.MetaMorpheusPsmTsv);
-            //LoadData(rawFilePath, FileType.RawFile);
-
+            string dir = System.IO.Directory.GetCurrentDirectory();
+            Loaders.LoadElements(dir + @"\elements.dat");
             listView.ItemsSource = DeconvolutedFeatures;
+
             /*
             REngine R;
             REngine.SetEnvironmentVariables();
@@ -59,6 +60,7 @@ namespace Lyra
         {
             if(chargeToColor == null)
             {
+                var converter = new BrushConverter();
                 chargeToColor = new Dictionary<int, SolidColorBrush>();
                 chargeToColor.Add(1, Brushes.DeepPink);
                 chargeToColor.Add(2, Brushes.Purple);
@@ -66,6 +68,10 @@ namespace Lyra
                 chargeToColor.Add(4, Brushes.Green);
                 chargeToColor.Add(5, Brushes.Gold);
                 chargeToColor.Add(6, Brushes.Orange);
+                chargeToColor.Add(7, Brushes.DarkCyan);
+                chargeToColor.Add(8, Brushes.DimGray);
+                chargeToColor.Add(9, Brushes.Firebrick);
+                chargeToColor.Add(10, Brushes.LimeGreen);
 
                 chargeToColor.Add(int.MinValue, Brushes.Black);
             }
@@ -248,16 +254,8 @@ namespace Lyra
 
         private void LoadData(string path, FileType fileType)
         {
-            string[] parsedLine;
-            double mass;
-            double apexRt;
-            string[] z;
-            int ch;
-            string[] str;
-
             if (fileType == FileType.DeconvolutionTSV)
             {
-                DeconvolutedFeatures = new List<ChromatographicPeak>();
                 var lines = System.IO.File.ReadAllLines(path);
 
                 for (int i = 0; i < lines.Length; i++)
@@ -267,25 +265,24 @@ namespace Lyra
 
                     var deconvolutedFeature = new ChromatographicPeak();
 
-                    parsedLine = lines[i].Split('\t');
-                    mass = double.Parse(parsedLine[0]);
-                    apexRt = double.Parse(parsedLine[10]);
-                    z = parsedLine[15].Split(new string[] { "[" }, StringSplitOptions.RemoveEmptyEntries);
+                    var parsedLine = lines[i].Split('\t');
+                    var mass = double.Parse(parsedLine[0]);
+                    var apexRt = double.Parse(parsedLine[10]);
+                    var chargeStates = parsedLine[16].Split(new string[] { "[" }, StringSplitOptions.RemoveEmptyEntries);
                     
-                    foreach(var charge in z)
+                    foreach(var chargeState in chargeStates)
                     {
-                        ch = (int)char.GetNumericValue(charge[0]);
-                        str = charge.Split(new string[] { "]", ",", "|" }, StringSplitOptions.RemoveEmptyEntries);
+                        int z = int.Parse(chargeState.Split('|')[0]);
+                        var str = chargeState.Split(new string[] { "]", ",", "|" }, StringSplitOptions.RemoveEmptyEntries);
 
                         for(int j = 1; j < str.Length; j++)
                         {
                             var h = str[j].Split(';');
                             double intensity = double.Parse(h[1]);
-                            var env = new IsotopicEnvelope(intensity, double.Parse(h[0]), ch);
+                            var env = new IsotopicEnvelope(intensity, double.Parse(h[0]), z);
                             deconvolutedFeature.isotopicEnvelopes.Add(env);
                         }
                     }
-
                     
                     deconvolutedFeature.mass = mass;
                     deconvolutedFeature.apexRt = apexRt;
@@ -302,9 +299,9 @@ namespace Lyra
                 string ext = System.IO.Path.GetExtension(path).ToUpperInvariant();
 
                 if (ext.Equals(".RAW"))
-                    rawFile = IO.Thermo.ThermoStaticData.LoadAllStaticData(path);
-                else if (ext.Equals(".MZML"))
-                    rawFile = IO.MzML.Mzml.LoadAllStaticData(path);
+                    rawFile = ThermoStaticData.LoadAllStaticData(path);
+                if (ext.Equals(".MZML"))
+                    rawFile = Mzml.LoadAllStaticData(path);
                 else
                     throw new Exception("Cannot read file format: " + ext);
             }
@@ -372,9 +369,34 @@ namespace Lyra
             var listview = sender as ListView;
             var t = listview.SelectedItem as ChromatographicPeak;
             
-            List<Tuple<double, double>> dataPoints = new List<Tuple<double, double>>();
-            
             DrawChromatogram(t, canGraph);
+        }
+
+        private void txtFilter_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            
+        }
+
+        private void _LoadFromMenu(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+
+            openFileDialog.Filter = 
+                "Tab-Delimited Text (*.tsv)|*.tsv|" +
+                "MS Data Files (*.raw;*.mzml)|*.raw;*.mzml|" + 
+                "All files (*.*)|*.*";
+            openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            openFileDialog.Multiselect = false;
+            
+            openFileDialog.ShowDialog();
+
+            string path = openFileDialog.FileName;
+            var ext = System.IO.Path.GetExtension(path).ToUpperInvariant();
+
+            if(ext.Equals(".MZML") || ext.Equals(".RAW"))
+                LoadData(path, FileType.RawFile);
+            else if(ext.Equals(".TSV") || ext.Equals(".TXT"))
+                LoadData(path, FileType.DeconvolutionTSV);
         }
     }
 }

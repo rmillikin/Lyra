@@ -4,10 +4,18 @@
   xmlns:Lyra="clr-namespace:Lyra"
   Title="Lyra"
   Height="500" Width="700" Loaded="Window_Loaded">
-    <StackPanel Orientation="Horizontal">
-        <ListView Name="listView" SelectionChanged ="listNode_Selected" Width="200"/>
-        <Viewbox>
-            <Canvas x:Name="canGraph" Background="White" Height="500" Width="500" HorizontalAlignment="Right" VerticalAlignment="Center" />
-        </Viewbox>
-    </StackPanel>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open" Click="_LoadFromMenu"/>
+            </MenuItem>
+        </Menu>
+        <TextBox DockPanel.Dock="Top" Margin="5,5,495,10" Name="txtFilter" TextChanged="txtFilter_TextChanged" />
+        <StackPanel Orientation="Horizontal">
+            <ListView Name="listView" SelectionChanged ="listNode_Selected" Width="200"/>
+            <Viewbox>
+                <Canvas x:Name="canGraph" Background="White" Height="500" Width="500" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Viewbox>
+        </StackPanel>
+    </DockPanel>
 </Window>
