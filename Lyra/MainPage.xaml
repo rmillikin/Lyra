@@ -10,12 +10,18 @@
                 <MenuItem Header="_Open" Click="_LoadFromMenu"/>
             </MenuItem>
         </Menu>
-        <TextBox DockPanel.Dock="Top" Margin="5,5,495,10" Name="txtFilter" TextChanged="txtFilter_TextChanged" />
-        <StackPanel Orientation="Horizontal">
-            <ListView Name="listView" SelectionChanged ="listNode_Selected" Width="200"/>
-            <Viewbox>
-                <Canvas x:Name="canGraph" Background="White" Height="500" Width="500" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        <DockPanel>
+            <ListView Name="listView" DockPanel.Dock="Left" SelectionChanged ="listNode_Selected" Width="200" MaxHeight="500"/>
+            <Viewbox DockPanel.Dock="Top" Height="220" Stretch="Uniform">
+                <Border BorderThickness="1" BorderBrush="Black">
+                    <Canvas Name="topGraph" Background="White" Width="440" Height="200"/>
+                </Border>
             </Viewbox>
-        </StackPanel>
+            <Viewbox DockPanel.Dock="Top" Height="220" Stretch="Uniform">
+                <Border BorderThickness="1" BorderBrush="Black">
+                    <Canvas Name="bottomGraph" Background="White" Width="440" Height="200"/>
+                </Border>
+            </Viewbox>
+        </DockPanel>
     </DockPanel>
 </Window>
